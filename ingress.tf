@@ -25,8 +25,8 @@ resource "kubernetes_secret" "default-server-secret" {
   }
 
   data {
-    "tls.crt" = "${var.default_server_cert}"
-    "tls.key" = "${var.default_server_key}"
+    "tls.crt" = "${base64decode(var.default_server_cert)}"
+    "tls.key" = "${base64decode(var.default_server_key)}"
   }
 
   type = "Opaque"
@@ -43,6 +43,7 @@ resource "kubernetes_cluster_role_binding" "nginx-ingress" {
   role_ref {
     name      = "cluster-admin"
     kind      = "ClusterRole"
+    api_group = "rbac.authorization.k8s.io"
   }
   subject {
     kind      = "ServiceAccount"
@@ -52,6 +53,8 @@ resource "kubernetes_cluster_role_binding" "nginx-ingress" {
   }
 }
 
+# Can removal manual mounting of service account token once the following is merged:
+# https://github.com/terraform-providers/terraform-provider-kubernetes/pull/261
 resource "kubernetes_deployment" "nginx-ingress" {
   metadata {
     name      = "nginx-ingress"
@@ -108,8 +111,20 @@ resource "kubernetes_deployment" "nginx-ingress" {
             }
           }
 
+          volume_mount {
+            mount_path = "/var/run/secrets/kubernetes.io/serviceaccount"
+            name = "${kubernetes_service_account.nginx-ingress.default_secret_name}"
+            read_only = true
+          }
+
           args = ["-nginx-configmaps=$(POD_NAMESPACE)/nginx-config", "-default-server-tls-secret=$(POD_NAMESPACE)/default-server-secret"]
         }
+        volume {
+          name = "${kubernetes_service_account.nginx-ingress.default_secret_name}"
+          secret {
+            secret_name = "${kubernetes_service_account.nginx-ingress.default_secret_name}"
+        }
+}
       }
     }
   }
