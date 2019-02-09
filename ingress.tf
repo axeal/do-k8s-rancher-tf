@@ -129,3 +129,30 @@ resource "kubernetes_deployment" "nginx-ingress" {
     }
   }
 }
+
+resource "kubernetes_service" "nginx-ingress" {
+  metadata {
+    name = "nginx-ingress"
+    namespace = "nginx-ingress"
+  }
+
+  spec {
+    type = "LoadBalancer"
+
+    selector {
+      app = "nginx-ingress"
+    }
+
+    port {
+      name = "http"
+      port = "80"
+      target_port = "80"
+    }
+
+    port {
+      name = "https"
+      port = "443"
+      target_port = "443"
+    }
+  }
+}
