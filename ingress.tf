@@ -123,8 +123,8 @@ resource "kubernetes_deployment" "nginx-ingress" {
           name = "${kubernetes_service_account.nginx-ingress.default_secret_name}"
           secret {
             secret_name = "${kubernetes_service_account.nginx-ingress.default_secret_name}"
+          }
         }
-}
       }
     }
   }
