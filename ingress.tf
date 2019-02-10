@@ -1,3 +1,7 @@
+# Using kubernetes/ingress-nginx
+# https://github.com/helm/charts/tree/master/stable/nginx-ingress
+# https://github.com/kubernetes/ingress-nginx/releases
+
 resource "kubernetes_namespace" "nginx-ingress" {
   metadata {
     name = "nginx-ingress"
@@ -13,23 +17,9 @@ resource "kubernetes_service_account" "nginx-ingress" {
 
 resource "kubernetes_config_map" "nginx-config" {
   metadata {
-    name      = "nginx-config"
+    name      = "nginx-config-controller"
     namespace = "nginx-ingress"
   }
-}
-
-resource "kubernetes_secret" "default-server-secret" {
-  metadata {
-    name      = "default-server-secret"
-    namespace = "nginx-ingress"
-  }
-
-  data {
-    "tls.crt" = "${base64decode(var.default_server_cert)}"
-    "tls.key" = "${base64decode(var.default_server_key)}"
-  }
-
-  type = "Opaque"
 }
 
 #Once Terraform k8s provider released with ClusterRole support create new role for nginx-ingress
@@ -53,11 +43,11 @@ resource "kubernetes_cluster_role_binding" "nginx-ingress" {
   }
 }
 
-# Can removal manual mounting of service account token once the following is merged:
+# Can remove manual mounting of service account token once the following is merged:
 # https://github.com/terraform-providers/terraform-provider-kubernetes/pull/261
-resource "kubernetes_deployment" "nginx-ingress" {
+resource "kubernetes_deployment" "nginx-ingress-controller" {
   metadata {
-    name      = "nginx-ingress"
+    name      = "nginx-ingress-controller"
     namespace = "nginx-ingress"
   }
 
@@ -66,22 +56,22 @@ resource "kubernetes_deployment" "nginx-ingress" {
 
     selector {
       match_labels {
-        app = "nginx-ingress"
+        app = "nginx-ingress-controller"
       }
     }
 
     template {
       metadata {
         labels {
-          app = "nginx-ingress"
+          app = "nginx-ingress-controller"
         }
       }
 
       spec {
         service_account_name = "nginx-ingress"
         container {
-          image = "nginx/nginx-ingress:1.4.3"
-          name  = "nginx-ingress"
+          image = "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.22.0"
+          name  = "nginx-ingress-controller"
 
           port {
             name           = "http"
@@ -117,7 +107,16 @@ resource "kubernetes_deployment" "nginx-ingress" {
             read_only = true
           }
 
-          args = ["-nginx-configmaps=$(POD_NAMESPACE)/nginx-config", "-default-server-tls-secret=$(POD_NAMESPACE)/default-server-secret"]
+          args = ["/nginx-ingress-controller", "--default-backend-service=nginx-ingress/nginx-ingress-default-backend", "--election-id=ingress-controller-leader", "--ingress-class=nginx", "--configmap=nginx-ingress/nginx-ingress-controller"]
+
+          security_context {
+            capabilities {
+              add = ["NET_BIND_SERVICE"]
+              drop = ["ALL"]
+            }
+            run_as_user = "33"
+          }
+
         }
         volume {
           name = "${kubernetes_service_account.nginx-ingress.default_secret_name}"
@@ -130,9 +129,46 @@ resource "kubernetes_deployment" "nginx-ingress" {
   }
 }
 
-resource "kubernetes_service" "nginx-ingress" {
+resource "kubernetes_deployment" "nginx-ingress-default-backend" {
   metadata {
-    name = "nginx-ingress"
+    name      = "nginx-ingress-default-backend"
+    namespace = "nginx-ingress"
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels {
+        app = "nginx-ingress-default-backend"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          app = "nginx-ingress-default-backend"
+        }
+      }
+
+      spec {
+        container {
+          image = "k8s.gcr.io/defaultbackend:1.4"
+          name  = "nginx-ingress-default-backend"
+
+          port {
+            name           = "http"
+            container_port = "8080"
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "nginx-ingress-controller" {
+  metadata {
+    name      = "nginx-ingress-controller"
     namespace = "nginx-ingress"
   }
 
@@ -140,19 +176,40 @@ resource "kubernetes_service" "nginx-ingress" {
     type = "LoadBalancer"
 
     selector {
-      app = "nginx-ingress"
+      app = "nginx-ingress-controller"
     }
 
     port {
-      name = "http"
-      port = "80"
+      name        = "http"
+      port        = "80"
       target_port = "80"
     }
 
     port {
-      name = "https"
-      port = "443"
+      name        = "https"
+      port        = "443"
       target_port = "443"
+    }
+  }
+}
+
+resource "kubernetes_service" "nginx-ingress-default-backend" {
+  metadata {
+    name      = "nginx-ingress-default-backend"
+    namespace = "nginx-ingress"
+  }
+
+  spec {
+    type = "ClusterIP"
+
+    selector {
+      app = "nginx-ingress-default-backend"
+    }
+
+    port {
+       name        = "http"
+       port        = "80"
+       target_port = "http"
     }
   }
 }
