@@ -37,3 +37,5 @@ variable "cloudflare_zone" {}
 variable "rancher_host" {
   default = "rancher"
 }
+
+variable "letsencrypt_email" {}
