@@ -53,6 +53,7 @@ resource "kubernetes_deployment" "nginx-ingress-controller" {
 
   spec {
     replicas = 1
+    progress_deadline_seconds = 60
 
     selector {
       match_labels {
@@ -117,6 +118,32 @@ resource "kubernetes_deployment" "nginx-ingress-controller" {
             run_as_user = "33"
           }
 
+          liveness_probe {
+            failure_threshold = 3
+            http_get {
+              path = "/healthz"
+              port = "10254"
+              scheme = "HTTP"
+            }
+            initial_delay_seconds = 10
+            period_seconds = 10
+            success_threshold = 1
+            timeout_seconds = 1
+          }
+
+          readiness_probe {
+            failure_threshold = 3
+            http_get {
+              path = "/healthz"
+              port = "10254"
+              scheme = "HTTP"
+            }
+            initial_delay_seconds = 10
+            period_seconds = 10
+            success_threshold = 1
+            timeout_seconds = 1
+          }
+
         }
         volume {
           name = "${kubernetes_service_account.nginx-ingress.default_secret_name}"
@@ -137,6 +164,7 @@ resource "kubernetes_deployment" "nginx-ingress-default-backend" {
 
   spec {
     replicas = 1
+    progress_deadline_seconds = 60
 
     selector {
       match_labels {
@@ -160,7 +188,22 @@ resource "kubernetes_deployment" "nginx-ingress-default-backend" {
             name           = "http"
             container_port = "8080"
           }
+
+          liveness_probe {
+            failure_threshold = 3
+            http_get {
+              path = "/healthz"
+              port = "8080"
+              scheme = "HTTP"
+            }
+            initial_delay_seconds = 30
+            period_seconds = 10
+            success_threshold = 1
+            timeout_seconds = 5
+          }
         }
+
+        termination_grace_period_seconds = 60
       }
     }
   }
