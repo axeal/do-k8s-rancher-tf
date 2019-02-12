@@ -23,4 +23,6 @@ resource "helm_release" "rancher" {
     name  = "letsEncrypt.email"
     value = "${var.letsencrypt_email}"
   }
+
+  depends_on = ["helm_release.cert-manager"]
 }
