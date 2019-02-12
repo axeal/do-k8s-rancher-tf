@@ -3,7 +3,7 @@ provider "digitalocean" {
 }
 
 resource "digitalocean_kubernetes_cluster" "do-k8s-cluster" {
-  name    = "do-k8s-cluster"
+  name    = "${var.do_cluster_name}"
   region  = "${var.do_region}"
   version = "${var.do_k8s_version}"
 
@@ -49,6 +49,7 @@ resource "kubernetes_cluster_role_binding" "tiller" {
 provider "helm" {
   install_tiller  = true
   service_account = "tiller"
+  tiller_image    = "gcr.io/kubernetes-helm/tiller:v2.12.3"
 
   kubernetes {
     host = "${digitalocean_kubernetes_cluster.do-k8s-cluster.endpoint}"
