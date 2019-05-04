@@ -6,6 +6,16 @@ resource "kubernetes_namespace" "nginx-ingress" {
   metadata {
     name = "nginx-ingress"
   }
+  lifecycle {
+    ignore_changes = [
+      "metadata.0.labels.%",
+      "metadata.0.labels.field.cattle.io/projectId",
+      "metadata.0.annotations.%",
+      "metadata.0.annotations.cattle.io/status",
+      "metadata.0.annotations.field.cattle.io/projectId",
+      "metadata.0.annotations.lifecycle.cattle.io/create.namespace-auth"
+    ]
+  }
 }
 
 resource "kubernetes_service_account" "nginx-ingress" {
@@ -87,6 +97,13 @@ resource "kubernetes_deployment" "nginx-ingress-controller" {
   metadata {
     name      = "nginx-ingress-controller"
     namespace = "nginx-ingress"
+  }
+
+  lifecycle {
+    ignore_changes =  [
+      "metadata.0.annotations.%",
+      "metadata.0.annotations.field.cattle.io/publicEndpoints"
+    ]
   }
 
   spec {
@@ -251,6 +268,13 @@ resource "kubernetes_service" "nginx-ingress-controller" {
   metadata {
     name      = "nginx-ingress-controller"
     namespace = "nginx-ingress"
+  }
+
+  lifecycle {
+    ignore_changes =  [
+      "metadata.0.annotations.%",
+      "metadata.0.annotations.field.cattle.io/publicEndpoints"
+    ]
   }
 
   spec {
