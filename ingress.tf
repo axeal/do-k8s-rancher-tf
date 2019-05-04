@@ -22,16 +22,54 @@ resource "kubernetes_config_map" "nginx-config" {
   }
 }
 
-#Once Terraform k8s provider released with ClusterRole support create new role for nginx-ingress
-#https://github.com/terraform-providers/terraform-provider-kubernetes/pull/229
-#https://github.com/nginxinc/kubernetes-ingress/blob/master/deployments/rbac/rbac.yaml
+resource "kubernetes_cluster_role" "nginx-ingress" {
+    metadata {
+        name = "nginx-ingress"
+    }
+
+    rule {
+        api_groups = [""]
+        resources  = ["services", "endpoints"]
+        verbs      = ["get", "list", "watch"]
+    }
+    rule {
+        api_groups = [""]
+        resources  = ["secrets"]
+        verbs      = ["get", "list", "watch"]
+    }
+    rule {
+        api_groups = [""]
+        resources  = ["configmaps"]
+        verbs      = ["get", "list", "watch", "update", "create"]
+    }
+    rule {
+        api_groups = [""]
+        resources  = ["pods"]
+        verbs      = ["list"]
+    }
+    rule {
+        api_groups = [""]
+        resources  = ["events"]
+        verbs      = ["create", "patch"]
+    }
+    rule {
+        api_groups = ["extensions"]
+        resources  = ["ingresses"]
+        verbs      = ["get", "list", "watch"]
+    }
+    rule {
+        api_groups = ["extensions"]
+        resources  = ["ingresses/status"]
+        verbs      = ["update"]
+    }
+}
 
 resource "kubernetes_cluster_role_binding" "nginx-ingress" {
   metadata {
     name      = "nginx-ingress"
   }
   role_ref {
-    name      = "cluster-admin"
+    name      = "nginx-ingress"
     kind      = "ClusterRole"
     api_group = "rbac.authorization.k8s.io"
   }
