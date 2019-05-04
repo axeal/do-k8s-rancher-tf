@@ -9,7 +9,7 @@ variable "do_region" {
 }
 
 variable "do_k8s_version" {
-  default = "1.13.2-do.1"
+  default = "1.13.5-do.3"
 }
 
 variable "do_worker_size" {
