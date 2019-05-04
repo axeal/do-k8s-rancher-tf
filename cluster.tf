@@ -49,7 +49,7 @@ resource "kubernetes_cluster_role_binding" "tiller" {
 provider "helm" {
   install_tiller  = true
   service_account = "tiller"
-  tiller_image    = "gcr.io/kubernetes-helm/tiller:v2.12.3"
+  tiller_image    = "gcr.io/kubernetes-helm/tiller:v2.13.1"
 
   kubernetes {
     host = "${digitalocean_kubernetes_cluster.do-k8s-cluster.endpoint}"
