@@ -1,4 +1,4 @@
-resource "helm_repository" "rancher-stable" {
+data "helm_repository" "rancher-stable" {
   name = "rancher-stable"
   url  = "https://releases.rancher.com/server-charts/stable"
 }
@@ -6,7 +6,7 @@ resource "helm_repository" "rancher-stable" {
 resource "helm_release" "rancher" {
   name       = "rancher"
   namespace  = "cattle-system"
-  repository = "${helm_repository.rancher-stable.metadata.0.name}"
+  repository = "${data.helm_repository.rancher-stable.metadata.0.name}"
   chart      = "rancher-stable/rancher"
 
   set {
