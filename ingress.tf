@@ -109,7 +109,7 @@ resource "kubernetes_deployment" "nginx-ingress-controller" {
       spec {
         service_account_name = "nginx-ingress"
         container {
-          image = "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.22.0"
+          image = "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.24.0"
           name  = "nginx-ingress-controller"
 
           port {
